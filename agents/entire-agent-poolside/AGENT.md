@@ -1,14 +1,24 @@
 # Poolside — External Agent Research
 
-## Verdict
+## Scope and verification status
 
-COMPATIBLE as a hooks-backed adapter; native transcript storage is intentionally not used.
+This adapter is a hooks-backed integration; it intentionally does not read Poolside's private transcript storage. The repository does not include Poolside CLI source or a pinned external fixture, so claims about Poolside behavior below are split between implementation facts and assumptions that require live verification.
 
-## Evidence
+## Adapter facts
 
-Poolside documents six lifecycle hook events: `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`, `PreCompact`, and `SessionStart`. Hooks are configured under the top-level `hooks` key in project or user `settings.yaml`.
+- The binary detects `pool` with `exec.LookPath`.
+- Hook installation assumes `.poolside/settings.yaml` has a top-level `hooks` mapping whose event values are lists of `{command: ...}` mappings.
+- The adapter stores the complete validated hook JSON, plus normalized fields, under `.entire/tmp/poolside/<safe-session-id>.jsonl`.
+- Session references supplied through the protocol are restricted to that adapter-owned directory.
+- Installation merges YAML atomically, is idempotent, preserves non-Entire entries, rejects malformed settings, and uninstallation removes only exact generated command entries.
 
-Poolside also documents session persistence and `pool -r` resume, but its public documentation does not define a stable on-disk transcript schema. The adapter therefore treats Poolside hook payloads as the integration boundary and stores a normalized JSONL copy under Entire's temporary session directory.
+## External assumptions requiring live verification
+
+- The six configured hook names are accepted by the installed Poolside release: `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`, `PreCompact`, and `SessionStart`.
+- Poolside emits `session_id`, `timestamp`, `cwd`, prompt, tool, and response fields with the names represented by `rawHook`.
+- `entire hooks poolside <HookName>` is the correct hook command form.
+- `pool -r <session-id>` is the correct resume syntax.
+- Poolside's settings YAML accepts the command-list shape shown in the README.
 
 ## Session model
 
@@ -29,11 +39,11 @@ Poolside also documents session persistence and `pool -r` resume, but its public
 | PreToolUse | captured for transcript analysis |
 | PostToolUse | captured for transcript analysis |
 
-## Limitations
+## Entire mapping and limitations
 
-Poolside does not document a true session-end lifecycle hook; `Stop` is a turn boundary. The adapter consequently does not synthesize a session-end event.
+The adapter has no session-end mapping; `Stop` is treated as a turn boundary and no session-end event is synthesized.
 
-Token accounting and native transcript compaction are not declared capabilities because the hook protocol does not provide a stable token ledger or native transcript schema.
+Token accounting and native transcript compaction are not declared capabilities because this adapter has no verified Poolside token ledger or native transcript schema. Pre/post tool events are retained in the sidecar for analysis but do not produce standalone Entire events. Modified-file extraction is heuristic and may require adjustment once real Poolside tool names and payloads are verified.
 
 ## Security
 

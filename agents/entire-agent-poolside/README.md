@@ -4,7 +4,7 @@ External agent adapter for [Entire](https://entire.io/) and Poolside's `pool` CL
 
 ## Status
 
-Preview. The adapter uses Poolside's documented lifecycle hooks to maintain an Entire-owned JSONL transcript. It deliberately does not depend on Poolside's private log/trajectory storage layout.
+Preview. The adapter uses a hook-backed, Entire-owned JSONL sidecar and does not depend on Poolside's private transcript storage. The Poolside CLI and hook implementation are not part of this repository, so the hook names, payload fields, settings schema, and resume command must be verified against the installed Poolside release before production use.
 
 ## Supported lifecycle
 
@@ -29,9 +29,17 @@ Then enable Poolside as an external agent in Entire.
 
 ## Poolside configuration
 
-`install-hooks` creates `.poolside/settings.yaml` only when that file does not already exist. It never overwrites an existing Poolside configuration.
+`install-hooks` parses `.poolside/settings.yaml`, adds missing Entire command entries under the six configured hook names, and writes the merged YAML atomically. Existing settings and non-Entire hook entries are preserved. Re-running installation is a no-op. `uninstall-hooks` removes only entries whose command exactly matches the adapter's generated command.
 
-If a project already has `.poolside/settings.yaml`, add the six Entire hook commands to its existing `hooks` configuration rather than replacing the file.
+The adapter assumes Poolside accepts this shape:
+
+```yaml
+hooks:
+	SessionStart:
+		- command: entire hooks poolside SessionStart
+```
+
+That syntax and the command routing are adapter assumptions, not verified behavior bundled with this repository. Malformed settings are rejected and `--force` never overwrites them.
 
 ## Development
 
@@ -40,4 +48,4 @@ go test ./...
 go build ./cmd/entire-agent-poolside
 ```
 
-The adapter is intentionally marked preview until it has been exercised against a live Poolside session in the upstream E2E environment.
+The adapter is intentionally marked preview until it has been exercised against a live Poolside session. There is no native Poolside transcript integration, token accounting, or transcript compaction implementation. Modified-file extraction is heuristic and only considers path-like values from tool names that look like file mutations.
