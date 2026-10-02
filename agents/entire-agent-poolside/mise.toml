@@ -1,0 +1,11 @@
+[tasks.build]
+description = "Build the Poolside external agent"
+run = "go build -o entire-agent-poolside ./cmd/entire-agent-poolside"
+
+[tasks.test]
+description = "Run Poolside adapter tests"
+run = "go test ./..."
+
+[tasks.verify]
+description = "Build and run the adapter's smoke checks"
+run = "go test ./... && go build ./cmd/entire-agent-poolside"
